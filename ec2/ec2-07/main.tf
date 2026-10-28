@@ -1,12 +1,11 @@
 # ec2-07 — instance + AWS Backup plan + copy to a DR vault, DR vault LOCKED
-#           (pair of ec2-06)
 #
 #   instance --daily backup--> ft-posture-vault-07    (us-east-1)  not locked
 #                                   |
 #                                   +--copy--> ft-posture-dr-vault-07 (us-west-2)  LOCKED
 #
-# Differs from ec2-06 by the DR vault, the copy_action and the lock on the DR
-# vault. Only the DR vault is locked; the primary vault is not.
+# Standard AWS Backup path (tag selection) plus a DR vault, a copy_action and a
+# lock on the DR vault. Only the DR vault is locked; the primary vault is not.
 # Posture expectation: this is the EC2 fixture that should move
 # immutable_status above 0, through the locked DR copy.
 #

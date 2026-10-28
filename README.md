@@ -28,13 +28,15 @@ Prices are us-east-1 on-demand list prices. Every `main.tf` starts with a `COST`
 comment and prints the same figures with `terraform output cost_estimate`.
 `aws-detailed-cost-report.xlsx` has the full breakdown.
 
-**Every EC2 stack leaves its instance running.** A t3.micro is $0.0104/hr and the
-auto-assigned public IPv4 on `ec2-01` … `ec2-07` is $0.005/hr.
+**Every EC2 stack with an instance leaves it running** (all except `ec2-06`,
+which is a standalone EBS volume). A t3.micro (Amazon Linux) is $0.0104/hr and
+the auto-assigned public IPv4 on `ec2-01` … `ec2-05` and `ec2-07` is $0.005/hr.
 
 | | Per hour | Per month |
 |---|---|---|
-| One EC2 stack | $0.011 – $0.016 | $8.31 – $12.01 |
-| All 10 EC2 stacks | $0.149 | $108.80 |
+| One EC2 stack with an instance | $0.011 – $0.016 | $8.31 – $12.01 |
+| `ec2-06` (1 GB volume, no instance) | $0.00011 | $0.08 |
+| All 10 EC2 stacks | $0.133 | $96.95 |
 | One S3 stack, empty bucket | $0 | $0 |
 | One S3 stack, per 1 GB stored | $0.00003 – $0.00017 | $0.023 – $0.123 |
 
@@ -46,9 +48,9 @@ which one you have in Billing → Free Tier.
 | Allowance | Limit | What the fixtures consume |
 |---|---|---|
 | EC2 hours | 750 hrs/month, **per account** | 1 running instance = 730 hrs/month. Two exhaust it in ~15 days. |
-| EBS storage | 30 GB | 8 GB root per instance (AL2023 minimum) + 1 GB data volume where present. |
+| EBS storage | 30 GB | 8 GB root per instance (AL2023 minimum) + 1 GB data volume where present; `ec2-06` is a lone 1 GB volume. |
 | EBS snapshots / AWS Backup | billed per GB-month | Root ~1 GB, empty data volumes ~0 GB. |
-| Public IPv4 | 750 hrs/month for 12 months | One per running instance in `ec2-01` … `ec2-07`. |
+| Public IPv4 | 750 hrs/month for 12 months | One per running instance in `ec2-01` … `ec2-05` and `ec2-07`. |
 | S3 storage | 5 GB | Empty buckets cost nothing. All ten can run together. |
 
 ### What fits at the same time
@@ -80,8 +82,8 @@ score between them is attributable to that one change.
 | ec2-03 | + data volume + one manual EBS snapshot | Snapshot is an artifact; gives the volume copy_count 1 |
 | ec2-04 | + data volume + snapshot + AMI | AMI must not be counted as an unprotected resource |
 | ec2-05 | + data volume + DLM policy (every 24 h, keep 1) | Native snapshots without AWS Backup |
-| ec2-06 | AWS Backup plan, 1 vault, no lock (tag selection) | Standard AWS Backup path; immutable_status 0 |
-| ec2-07 | AWS Backup + copy to DR vault, **DR vault locked (compliance, 3 days)** | Immutable copy in another region |
+| ec2-06 | **Standalone** encrypted 1 GB gp3 volume, no instance, no protection | Unattached volume found and scored on its own |
+| ec2-07 | Instance, AWS Backup (tag selection) + copy to DR vault, **DR vault locked (compliance, 3 days)** | Immutable copy in another region |
 | ec2-08 | AWS Backup of the instance + copy to DR vault, DR locked (governance) | Instance ARN selection; recovery point is an AMI |
 | ec2-09 | AWS Backup of the **data volume only** + copy to DR, DR locked (governance) | Volume ARN selection; recovery point is an EBS snapshot |
 | ec2-backup-dr | Instance + data volume backup + copy to DR, **DR locked (compliance, 5 days)** | One recovery point covering every attached volume |
@@ -94,9 +96,8 @@ In every backup stack only the **DR vault** is locked; the primary vault is not.
   `terraform apply` and wait for both (15–40 minutes). Skip them with
   `-var="run_backup_now=false"`; run them again with
   `terraform apply -replace='terraform_data.backup_now[0]'`.
-- **ec2-06, ec2-08 and ec2-backup-dr** print the commands to run by hand:
-  `terraform output -raw backup_now` (ec2-06), `-raw commands` (ec2-08),
-  `-raw next_steps` (ec2-backup-dr).
+- **ec2-08 and ec2-backup-dr** print the commands to run by hand:
+  `terraform output -raw commands` (ec2-08), `-raw next_steps` (ec2-backup-dr).
 
 ### S3 (`s3/`)
 
