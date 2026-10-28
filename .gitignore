@@ -1,0 +1,20 @@
+# Terraform working files: never commit these
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Excel lock files and OS clutter
+~$*
+.DS_Store
+Thumbs.db

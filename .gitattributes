@@ -1,0 +1,11 @@
+# Documents are binary: never touch their bytes
+*.pdf   binary
+*.xlsx  binary
+
+# Scripts keep Unix line endings so bash and terraform fmt are happy on every OS
+*.sh    text eol=lf
+*.tf    text eol=lf
+*.hcl   text eol=lf
+*.md    text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
