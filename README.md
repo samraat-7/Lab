@@ -40,6 +40,62 @@ the auto-assigned public IPv4 on `ec2-01` … `ec2-05` and `ec2-07` is $0.005/hr
 | One S3 stack, empty bucket | $0 | $0 |
 | One S3 stack, per 1 GB stored | $0.00003 – $0.00017 | $0.023 – $0.123 |
 
+### Cost per folder
+
+Same figures as the **Folder costs** and **Our stacks** sheets of
+`aws-detailed-cost-report.xlsx`. "Backup + copy" is the part of the monthly
+total that is snapshot or AWS Backup vault storage; "First copy" is the one-time
+cross-region transfer, not included in the monthly total.
+
+**EC2** (instances left running, root volume ~1 GB used, data volumes empty):
+
+| Folder | Protection | Per hour | Per month | Backup + copy (in total) | First copy (one-time) |
+|---|---|---|---|---|---|
+| ec2-01 | None | $0.01628 | $11.88 | $0 | $0 |
+| ec2-02 | None (2 volumes) | $0.01639 | $11.96 | $0 | $0 |
+| ec2-03 | EBS snapshot | $0.01639 | $11.96 | ~$0 (empty data volume) | $0 |
+| ec2-04 | Snapshot + AMI | $0.01645 | $12.01 | $0.05 (AMI root snapshot) | $0 |
+| ec2-05 | DLM snapshots | $0.01645 | $12.01 | $0.05 (root snapshot) | $0 |
+| ec2-06 | None (standalone volume) | $0.00011 | $0.08 | $0 | $0 |
+| ec2-07 | Backup + copy job, DR locked | $0.01641 | $11.98 | $0.10 (1 GB primary + 1 GB DR vault) | $0.02 |
+| ec2-08 | Backup + copy job, DR locked | $0.01141 | $8.33 | $0.10 | $0.02 |
+| ec2-09 | Backup + copy job (data volume) | $0.01139 | $8.31 | ~$0 (empty data volume) | ~$0 |
+| ec2-backup-dr | Backup + copy job, DR locked | $0.01152 | $8.41 | $0.10 | $0.02 |
+| **All 10 EC2** | | **$0.133** | **$96.95** | **$0.40** | **$0.06** |
+
+**S3** (an empty bucket costs $0; costs below are for data in the bucket):
+
+| Folder | Protection | Per month, 1 GB | Per month, 10 MB | First copy, 10 MB (one-time) |
+|---|---|---|---|---|
+| s3-01 | None | $0.023 | $0.00022 | $0 |
+| s3-02 | Versioning | $0.023 | $0.00022 | $0 |
+| s3-03 | Versioning + lifecycle + SSE-S3 | $0.023 | $0.00022 | $0 |
+| s3-04 | CRR | $0.046 | $0.00045 | $0.00020 |
+| s3-05 | Backup job, 1 vault | $0.073 | $0.00071 | $0 |
+| s3-06 | Backup + copy job | $0.123 | $0.00120 | $0.00020 |
+| s3-07 | Object Lock | $0.023 | $0.00022 | $0 |
+| s3-08 | CRR + SRR + Object Lock | $0.069 | $0.00067 | $0.00020 |
+| s3-backup-dr | Backup + copy job, DR locked | $0.123 | $0.00120 | $0.00020 |
+| s3-replication | CRR + SRR + Object Lock | $0.069 | $0.00067 | $0.00020 |
+| **All 10 S3** | | **$0.595** | **$0.0058** | **$0.00098** |
+
+For 1 GB, the one-time first copy is $0.02 in each folder that has a non-zero
+10 MB figure.
+
+**Where the protection cost comes from** (us-east-1, per GB):
+
+| Item | One-time | Per month | Notes |
+|---|---|---|---|
+| AWS Backup job | $0 per job | $0.05 in the primary vault | EC2, EBS and S3 alike |
+| AWS Backup copy job | $0 per job, $0.02/GB transfer on the first copy | $0.05 in the DR vault | Later copies send only changed data |
+| S3 CRR (cross-region) | $0.02/GB transfer | $0.023 for the replica | Copies only objects written after apply |
+| S3 SRR (same region) | $0 | $0.023 for the replica | No transfer charge |
+| EBS snapshot / AMI / DLM | $0 | $0.05 on used blocks | Later snapshots store only changes |
+
+Not included anywhere: S3 requests (about $0.005 per 1,000 PUTs), AWS Backup's
+128 KB minimum per S3 object, old versions kept by versioning or Object Lock,
+and restore jobs (S3 $0.02/GB; EC2 and EBS free).
+
 These numbers assume a **legacy account created before 15 July 2025**. Accounts
 created on or after that date are on the credit-based Free Plan and have no
 per-service allowances; everything draws from the credit pool instead. Check
