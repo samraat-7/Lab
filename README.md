@@ -203,6 +203,6 @@ aws resourcegroupstaggingapi get-resources --tag-filters "Key=Fixture,Values=pos
 ## 7. What never goes in this repo
 
 `.gitignore` keeps out `terraform.tfstate*` (state can contain your account ID
-and resource ARNs), `.terraform/` provider caches and `*.tfvars`. The
-`.terraform.lock.hcl` files are committed so everyone uses the same provider
-versions.
+and resource ARNs), `.terraform/` provider caches, `.terraform.lock.hcl` and
+`*.tfvars`. `terraform init` creates the lock file again on each machine, using
+the newest provider that matches `~> 5.0`.
